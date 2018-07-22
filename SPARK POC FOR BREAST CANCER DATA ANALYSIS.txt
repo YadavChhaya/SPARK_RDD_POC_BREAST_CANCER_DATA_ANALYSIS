@@ -1,0 +1,134 @@
+﻿Spark POC – BREAST CANCER Data Analysis
+--------------------------------------
+
+Breast Cancer Analysis – Dataset
+The clinical dataset in this blog is released for the awareness of breast cancer. For practice, few problems have been designed with the solution which makes the user understand better.
+Breast cancer is a disease in which the cells in the breast grow out of control. There two types of breast cancer namely,
+
+ Invasive ductal carcinoma – The most common type of breast cancer is ductal carcinoma which begins in the cells of the ducts. Breast cancer can also begin in the cell lobules and in other tissues. Ductal carcinoma in situ is a condition in which abnormal cells are found in the lining of the duct but they haven’t spread outside the duct.
+
+ Invasive Lobular Carcinoma – Breast cancer that spreads from where it began in the ducts or lobules to surrounding tissues is called invasive breast cancer.
+
+In inflammatory breast cancer, the breast looks red and swollen and feels warm because the cancer cells block the lymph vessels in the skin.
+In the U.S., breast cancer is the second most common cancer in women after skin cancer. It can occur in both men and women, but it is rare in men. Each year there are about 100 times more new cases of breast cancer in women than in men.
+
+
+DATASET LINK:
+-------------
+https://drive.google.com/file/d/1yD1GWk2OWgOooq9WI1K7puoaKD7CbS8T/view
+
+Dataset Description:
+--------------------
+The below table gives you the dataset description:
+Column No. 	Column Name 	datatype 		Description
+Column 0 	Complete_TCGA_ID 	string 		Unique ID for people
+Column 1 	Gender       		string 		Female
+Column 2 	Age_Initial_diag 	int 		Age of the person at the time of admission
+Column 3 	ER_Status 		string	 	Estrogen receptors are often referred to as ER-positive (or ER+) cancers.
+Column 4 	PR_Status 		string	 	Breast cancer cells have progesterone receptors, the cancer is called PR-positive breast cancer.
+
+Column 5 	HER2_Final_Status 	string	 	HER2-positive breast cancer is a breast cancer that tests positive for a protein called human epidermal growth factor receptor 2 (HER2), which promotes the growth of cancer cells. In about 1 of every 5 breast cancers, the cancer cells have a gene mutation that makes an excess of the HER2 protein.
+
+Column 6 	Tumor 			string 		Numbers after the T (such as T1, T2, T3, and T4) might describe the tumor size and/or amount of spread into nearby structures. The higher the T number, the larger the tumor and/or the more it has grown into nearby tissues.
+
+Column 7 	Node 			string 		Numbers after the N (such as N1, N2, and N3) might describe the size, location, and/or the number of nearby lymph nodes affected by cancer. The higher the N number, the greater cancer spread to nearby lymph nodes.
+N0 means nearby lymph nodes do not contain cancer.
+
+Column 8 	Node_Coded 		string 		Positive means the cancer is present.
+Negative means cancer not present.
+
+Column 9 	Metastasis 		string 		M0 means do not contain cancer.
+M1 means do contain cancer.
+ 
+Column 10 	Metastasis_Coded 	string 		Positive means the cancer is present.
+Negative means cancer not present.
+
+Column 11 	AJCC_Stage 		string 		The AJCC staging system is a classification system developed by the American Joint Committee on Cancer for describing the extent of disease progression in cancer patients.
+Column 12 	Converted_Stage 	string 		After treatment any change in AJCC_stage.
+Column 13 	Survival_Data_Form 	string 	
+Column 14 	Vital_Status 		string 		The person is living or dead/deseased.
+Column 15 	Days_to_Date_of_Last_Contact 	int 	Number of days passed while contacting to a person.
+Column 16 	Days_to_date_of_Death  		int 	Number of days passed after the death of a person.
+
+
+Problem Statements #1 – What is the average age at which initial pathologic diagnosis to be done?
+=================================================================================================
+
+Source Code:
+============
+
+hadoop fs -mkdir -p /user/hadoop/input/
+hadoop fs -put /home/cloudera/Downloads/breast_cancer_clinical_data.csv /user/hadoop/input/
+spark-shell
+val rdd1 = sc.textFile("hdfs://quickstart.cloudera:8020/user/hadoop/input/breast_cancer_clinical_data.csv")
+val header = rdd1.first
+//removal of header from data for data analysis
+val rdd2 = rdd1.filter{ line => line != header}
+val rdd3 = rdd2.map{ line => line.toString() }
+val rdd4 = rdd3.map(_.split(","))
+val rdd5 = rdd4.map(x => x(2).toInt)
+val rdd6 = rdd5.reduce(_+_)/rdd2.count
+
+Output:
+-------
+Long = 58
+
+
+Problem Statements #2 – Find the average age of people of each AJCC Stage?
+
+Source Code:
+============
+
+
+val rdd1 = sc.textFile("hdfs://quickstart.cloudera:8020/user/hadoop/input/breast_cancer_clinical_data.csv")
+val header = rdd1.first
+//removal of header from data for data analysis
+val rdd2 = rdd1.filter{ line => line != header}
+val rdd3 = rdd2.map{ line => line.toString() }
+val rdd4 = rdd3.map(_.split(","))
+val rdd5 = rdd4.map(x => (x(11),x(15).toInt))
+val rdd6 = rdd5.mapValues(a => (a,1))
+val rdd7 = rdd6.reduceByKey( (x,y) => (x._1 + y._1, x._2 + y._2))
+val rdd8 = rdd7.mapValues{ case(sum,count) => (1.0*sum) / count }
+rdd8.foreach(println)
+
+Output:
+------------
+
+(Stage I,906.6666666666666)
+(Stage IV,802.0)
+(Stage IIB,961.695652173913)
+(Stage IIA,910.1666666666666)
+(Stage IIIB,316.6666666666667)
+(Stage III,562.0)
+(Stage IIIC,512.5)
+(Stage II,729.9090909090909)
+(Stage IB,549.5)
+(Stage IIIA,731.25)
+(Stage IA,638.4285714285714)
+
+
+
+Problem Statements #3 – Find out the people with vital status and their count?
+
+Source Code:
+============
+
+val rdd1 = sc.textFile("hdfs://quickstart.cloudera:8020/user/hadoop/input/breast_cancer_clinical_data.csv")
+val header = rdd1.first
+//removal of header from data for data analysis
+val rdd2 = rdd1.filter{ line => line != header}
+val rdd3 = rdd2.map{ line => line.toString() }
+val rdd4 = rdd3.map(_.split(","))
+val rdd5 = rdd4.map(x => (x(14),1))
+val rdd6 = rdd5.reduceByKey((a,b) => a+b)
+rdd6.foreach(println)
+
+Output:
+------------
+
+
+(LIVING,94)
+(DECEASED,11)
+
+
